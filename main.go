@@ -1,22 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
+	"log"
 )
 
 func main() {
-	body := `{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}`
-	resp, err := http.Post("https://ethereum-rpc.publicnode.com", "application/json", strings.NewReader(body))
+	block, err := getBlockByNumber(context.Background(), "latest", true)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
-
-	defer resp.Body.Close()
-
-	out, _ := io.ReadAll(resp.Body)
-	fmt.Println(string(out))
+	fmt.Printf("block %s  txs=%d  stateRoot=%s\n",
+		block.Number, len(block.Transactions), block.StateRoot)
 }
