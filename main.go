@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -12,13 +11,38 @@ func hexToUint64(s string) uint64 {
 	return n
 }
 
-func main() {
-	cur, _ := getBlockByNumber(context.Background(), "latest", true)
-	n := hexToUint64(cur.Number)
-	prev, _ := getBlockByNumber(context.Background(), fmt.Sprintf("0x%x", n-1), true)
+func process(prev, cur *Block) ProcessedBlock {
+	pb := ProcessedBlock{Block: *cur}
+	pb.GasDelta = int64(hexToUint64(cur.GasUsed)) - int64(hexToUint64(prev.GasUsed))
+	pb.TimeDelta = int64(hexToUint64(cur.Timestamp)) - int64(hexToUint64(prev.Timestamp))
 
-	fmt.Printf("block delta:     %d\n", int64(n)-int64(hexToUint64(prev.Number)))
-	fmt.Printf("time delta:      %ds\n", int64(hexToUint64(cur.Timestamp))-int64(hexToUint64(prev.Timestamp)))
-	fmt.Printf("gas delta:       %d\n", int64(hexToUint64(cur.GasUsed))-int64(hexToUint64(prev.GasUsed)))
-	fmt.Printf("stateRoot same:  %t\n", prev.StateRoot == cur.StateRoot)
+	prevHashes := make(map[string]bool)
+	for _, tx := range prev.Transactions {
+		prevHashes[tx.Hash] = true
+	}
+	for _, tx := range cur.Transactions {
+		if !prevHashes[tx.Hash] {
+			pb.TxAdded = append(pb.TxAdded, tx)
+		}
+		if tx.To == "" {
+			pb.NewContracts = append(pb.NewContracts, tx)
+		}
+	}
+
+	curHashes := make(map[string]bool)
+	for _, tx := range cur.Transactions {
+		curHashes[tx.Hash] = true
+	}
+	for _, tx := range prev.Transactions {
+		if !curHashes[tx.Hash] {
+			pb.TxRemoved = append(pb.TxRemoved, tx)
+		}
+	}
+
+	return pb
+}
+
+func main() {
+	ctx := context.Background()
+	livews(ctx)
 }

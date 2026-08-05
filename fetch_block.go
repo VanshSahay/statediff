@@ -5,36 +5,87 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
 const rpcURL = "https://ethereum-rpc.publicnode.com"
+const wsURL = "wss://ethereum-rpc.publicnode.com"
 
-type rpcRequest struct {
-	JSONRPC string `json:"jsonrpc"`
-	Method  string `json:"method"`
-	Params  []any  `json:"params"`
-	ID      int    `json:"id"`
-}
-
-type rpcResponse struct {
-	JSONRPC string    `json:"jsonrpc"`
-	ID      int       `json:"id"`
-	Result  Block     `json:"result"`
-	Error   *rpcError `json:"error"`
-}
-
-type rpcError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-func (e *rpcError) Error() string {
+func (e *RPCError) Error() string {
 	return fmt.Sprintf("rpc error %d: %s", e.Code, e.Message)
 }
 
+func livews(ctx context.Context) {
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
+	defer conn.Close()
+
+	subReq := RPCRequest{
+		JSONRPC: "2.0",
+		Method:  "eth_subscribe",
+		Params:  []any{"newHeads"},
+		ID:      1,
+	}
+
+	if err := conn.WriteJSON(subReq); err != nil {
+		log.Fatal("subscribe:", err)
+	}
+
+	_, _, err = conn.ReadMessage()
+	if err != nil {
+		log.Fatal("sub ack:", err)
+	}
+
+	var prev *Block
+	for {
+		_, raw, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("read:", err)
+			return
+		}
+
+		var msg SubscriptionMessage
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			log.Println("unmarshal:", err)
+			continue
+		}
+
+		cur, err := getBlockByNumber(ctx, msg.Params.Result.Number, true)
+		if err != nil {
+			log.Println("fetch block:", err)
+			continue
+		}
+
+		if prev == nil {
+			prev = cur
+			log.Printf("watching from block %d\n", hexToUint64(cur.Number))
+			continue
+		}
+
+		pb := process(prev, cur)
+		printDiff(pb)
+		prev = cur
+	}
+
+}
+
+func printDiff(pb ProcessedBlock) {
+	fmt.Printf("block %d | +%ds | gas %+d | txs +%d -%d | new contracts %d\n",
+		hexToUint64(pb.Number),
+		pb.TimeDelta,
+		pb.GasDelta,
+		len(pb.TxAdded), len(pb.TxRemoved),
+		len(pb.NewContracts),
+	)
+}
+
 func getBlockByNumber(ctx context.Context, tag string, fullTx bool) (*Block, error) {
-	reqBody, err := json.Marshal(rpcRequest{
+	reqBody, err := json.Marshal(RPCRequest{
 		JSONRPC: "2.0",
 		Method:  "eth_getBlockByNumber",
 		Params:  []any{tag, fullTx},
@@ -56,7 +107,7 @@ func getBlockByNumber(ctx context.Context, tag string, fullTx bool) (*Block, err
 	}
 	defer resp.Body.Close()
 
-	var r rpcResponse
+	var r RPCResponse
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
 		return nil, err
 	}
