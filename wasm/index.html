@@ -17,12 +17,13 @@
   html { font-size: 18px; -webkit-font-smoothing: antialiased; background: var(--bg); }
   body { font-family: "Fraunces", Georgia, serif; color: var(--text); line-height: 1.65; min-height: 100vh; }
   main { max-width: 860px; margin: 0 auto; padding: 3rem 1.5rem 3rem; }
-  h1 { font-size: 2.6rem; font-weight: 400; letter-spacing: -0.015em; line-height: 1.1; margin-bottom: 0.35rem; }
-  .subtitle { color: var(--muted); margin-bottom: 1.5rem; max-width: 52ch; }
+  h1 { font-size: 2.6rem; font-weight: 400; letter-spacing: -0.015em; line-height: 1.1; margin-bottom: 0.35rem; text-align: center; }
+  .subtitle { color: var(--muted); margin-bottom: 1.5rem; max-width: 52ch; margin-left: auto; margin-right: auto; text-align: center; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0 1.75rem; }
   .section-label { font-size: 0.8rem; color: var(--muted); font-style: italic; margin-bottom: 0.75rem; }
-  .controls { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .controls { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; justify-content: center; }
   input { font-family: "JetBrains Mono", monospace; font-size: 0.75rem; background: var(--surface);
-    border: 1px solid var(--border); color: var(--text); border-radius: var(--radius); padding: 0.5rem 0.7rem; flex: 1; min-width: 240px; }
+    border: 1px solid var(--border); color: var(--text); border-radius: var(--radius); padding: 0.5rem 0.7rem; flex: 1; min-width: 240px; max-width: 420px; }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   button { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; font-weight: 500; cursor: pointer;
     border-radius: var(--radius); padding: 0.5rem 1rem; letter-spacing: 0.02em; }
@@ -31,7 +32,7 @@
   #stop { background: none; color: var(--muted); border: 1px solid var(--border); }
   #stop:hover { color: var(--text); border-color: var(--muted); }
   #status { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted);
-    padding: 0.5rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1.75rem; min-height: 1.6em; }
+    padding: 0.5rem 0; margin-bottom: 0.25rem; min-height: 1.6em; text-align: center; }
   #status.err { color: var(--neg); }
   #chain { overflow-x: auto; padding: 0.5rem 0.25rem 0.75rem; scrollbar-width: thin; }
   #chain-inner { display: flex; align-items: stretch; gap: 0.4rem; width: max-content; margin: 0 auto; }
@@ -46,6 +47,7 @@
   #block-view { display: none; }
   body.in-block #chain-view { display: none; }
   body.in-block #block-view { display: block; }
+  .section-label { text-align: left; }
   #block-view .box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 1.5rem 1.75rem; }
   #back { background: none; color: var(--muted); border: 1px solid var(--border); margin: 0 0 1rem; }
@@ -75,15 +77,16 @@
 </head>
 <body>
 <main>
+  <h1>statediff</h1>
+  <p class="subtitle">live block state diffs, straight from the chain's block access list</p>
+  <div class="controls">
+    <input id="rpc" placeholder="https://…trycloudflare.com — devnet RPC">
+    <button id="connect">Connect</button>
+    <button id="stop">Stop</button>
+  </div>
+  <div id="status">idle</div>
+  <hr class="divider">
   <div id="chain-view">
-    <h1>statediff</h1>
-    <p class="subtitle">live block state diffs, straight from the chain's block access list</p>
-    <div class="controls">
-      <input id="rpc" placeholder="https://…trycloudflare.com — devnet RPC">
-      <button id="connect">Connect</button>
-      <button id="stop">Stop</button>
-    </div>
-    <div id="status">idle</div>
     <p class="section-label">Chain</p>
     <div id="chain"><div id="chain-inner"><div class="empty">waiting for blocks…</div></div></div>
   </div>
