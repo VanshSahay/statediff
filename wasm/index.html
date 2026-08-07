@@ -115,6 +115,9 @@ function stateDiffBlock(json) {
 }
 
 function renderChain() {
+  const chain = document.getElementById("chain");
+  const atEnd = chain.scrollLeft + chain.clientWidth >= chain.scrollWidth - 8;
+  const prevScroll = chain.scrollLeft;
   chainInner.innerHTML = "";
   if (blocks.length === 0) {
     chainInner.innerHTML = '<div class="empty">waiting for blocks…</div>';
@@ -136,8 +139,8 @@ function renderChain() {
       chainInner.appendChild(arrow);
     }
   }
-  const chain = document.getElementById("chain");
-  chain.scrollLeft = chain.scrollWidth;
+  if (atEnd) chain.scrollLeft = chain.scrollWidth;
+  else chain.scrollLeft = prevScroll;
 }
 
 function openBlock(ev) {
