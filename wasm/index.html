@@ -11,14 +11,14 @@
   :root {
     --bg: #f4efe8; --surface: #faf7f3; --text: #2c2825; --muted: #8a8278;
     --accent: #3d7068; --accent-hover: #2a544d; --border: #e5ded5;
-    --radius: 4px;
+    --radius: 4px; --pos: #3d7068; --neg: #a4443c;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { font-size: 18px; -webkit-font-smoothing: antialiased; background: var(--bg); }
   body { font-family: "Fraunces", Georgia, serif; color: var(--text); line-height: 1.65; min-height: 100vh; }
-  main { max-width: 760px; margin: 0 auto; padding: 3rem 1.5rem 3rem; }
+  main { max-width: 860px; margin: 0 auto; padding: 3rem 1.5rem 3rem; }
   h1 { font-size: 2.6rem; font-weight: 400; letter-spacing: -0.015em; line-height: 1.1; margin-bottom: 0.35rem; }
-  .subtitle { color: var(--muted); margin-bottom: 1.5rem; max-width: 46ch; }
+  .subtitle { color: var(--muted); margin-bottom: 1.5rem; max-width: 52ch; }
   .section-label { font-size: 0.8rem; color: var(--muted); font-style: italic; margin-bottom: 0.75rem; }
   .controls { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
   input { font-family: "JetBrains Mono", monospace; font-size: 0.75rem; background: var(--surface);
@@ -31,12 +31,13 @@
   #stop { background: none; color: var(--muted); border: 1px solid var(--border); }
   #stop:hover { color: var(--text); border-color: var(--muted); }
   #status { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted);
-    padding: 0.5rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; min-height: 1.6em; }
-  #status.err { color: #a4443c; }
-  #chain { display: flex; align-items: stretch; gap: 0.4rem; overflow-x: auto; padding: 0.5rem 0.25rem 1rem; }
+    padding: 0.5rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1.75rem; min-height: 1.6em; }
+  #status.err { color: var(--neg); }
+  #chain { overflow-x: auto; padding: 0.5rem 0.25rem 0.75rem; scrollbar-width: thin; }
+  #chain-inner { display: flex; align-items: stretch; gap: 0.4rem; width: max-content; margin: 0 auto; }
   .card { min-width: 132px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; user-select: none; }
-  .card:hover { border-color: var(--accent); }
+    padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; user-select: none; }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
   .card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .card.live { border-color: var(--accent); }
   .card-num { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 0.25rem; }
@@ -45,18 +46,32 @@
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   .card-stats { font-family: "JetBrains Mono", monospace; font-size: 0.62rem; color: var(--muted); line-height: 1.5; }
   .arrow { align-self: center; color: var(--border); font-family: "JetBrains Mono", monospace; font-size: 1rem; user-select: none; }
-  .empty { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted); padding: 1rem 0; }
-  #detail { display: none; }
-  .detail-head { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.4rem; }
-  .diff { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; margin-bottom: 1rem; }
-  .diff .pos { color: var(--accent); }
-  .diff .neg { color: #a4443c; }
-  .bal-sum { font-size: 0.8rem; color: var(--muted); font-style: italic; margin-bottom: 0.75rem; }
-  .acct { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; font-weight: 500; margin-top: 0.6rem; }
-  .acct .label { color: var(--muted); font-weight: 400; }
-  .chg { font-family: "JetBrains Mono", monospace; font-size: 0.68rem; padding-left: 1.1rem; color: var(--text); }
-  .chg .val { color: var(--accent); }
-  .chg .dim { color: var(--muted); }
+  .empty { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted); padding: 1rem 0; text-align: center; }
+  #detail { display: none; margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.5rem; }
+  .detail-head { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .diff { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; margin-bottom: 1.5rem; }
+  .diff .pos { color: var(--pos); }
+  .diff .neg { color: var(--neg); }
+  .tx-row { display: flex; gap: 0.6rem; align-items: baseline; font-family: "JetBrains Mono", monospace; font-size: 0.68rem;
+    padding: 0.35rem 0; border-bottom: 1px dotted var(--border); }
+  .tx-idx { color: var(--muted); min-width: 2.2em; }
+  .tx-hash { color: var(--text); }
+  .tx-path { color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-path .arrow { color: var(--border); }
+  .tx-value { color: var(--text); }
+  .tx-type { font-size: 0.6rem; border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; color: var(--muted); }
+  .tx-new { color: var(--pos); }
+  .bal-sum { font-size: 0.8rem; color: var(--muted); font-style: italic; margin: 1.25rem 0 0.6rem; }
+  .txgroup { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+    padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; }
+  .txgroup-head { font-family: "JetBrains Mono", monospace; font-size: 0.65rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .txgroup-head .sys { color: var(--muted); font-style: italic; }
+  .acct-row { font-family: "JetBrains Mono", monospace; font-size: 0.68rem; padding: 0.15rem 0; display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+  .acct-addr { color: var(--text); }
+  .acct-row .label { color: var(--muted); }
+  .chip { font-size: 0.62rem; border: 1px solid var(--border); border-radius: 3px; padding: 0 5px; background: var(--bg); }
+  .chip.pos { color: var(--pos); border-color: var(--pos); }
+  .chip.neg { color: var(--neg); border-color: var(--neg); }
 </style>
 </head>
 <body>
@@ -70,7 +85,7 @@
   </div>
   <div id="status">idle</div>
   <p class="section-label">Chain</p>
-  <div id="chain"><div class="empty">waiting for blocks…</div></div>
+  <div id="chain"><div id="chain-inner"><div class="empty">waiting for blocks…</div></div></div>
   <div id="detail">
     <p class="section-label">Selected block</p>
     <div id="detail-body"></div>
@@ -79,7 +94,7 @@
 
 <script src="wasm_exec.js"></script>
 <script>
-const chain = document.getElementById("chain");
+const chainInner = document.getElementById("chain-inner");
 const detail = document.getElementById("detail");
 const detailBody = document.getElementById("detail-body");
 let blocks = [];
@@ -92,6 +107,7 @@ const systemContracts = {
 const hex2dec = h => parseInt(h, 16);
 const weiToEth = h => (Number(BigInt(h) / 1000000000000n) / 1000000).toFixed(6);
 const short = a => a.length <= 12 ? a : a.slice(0, 8) + "…" + a.slice(-4);
+const signed = n => (n > 0 ? "+" : "") + n;
 
 function stateDiffBlock(json) {
   const ev = JSON.parse(json);
@@ -101,55 +117,91 @@ function stateDiffBlock(json) {
 }
 
 function renderChain() {
-  chain.innerHTML = "";
+  chainInner.innerHTML = "";
+  if (blocks.length === 0) {
+    chainInner.innerHTML = '<div class="empty">waiting for blocks…</div>';
+    return;
+  }
   for (let i = 0; i < blocks.length; i++) {
     const ev = blocks[i];
     const card = document.createElement("div");
     card.className = "card" + (i === blocks.length - 1 ? " live" : "") + (i === pinned ? " selected" : "");
     card.innerHTML =
       `<div class="card-num">${hex2dec(ev.number)}</div>` +
-      `<div class="card-stats">${ev.txAdded} txs · ${ev.timeDelta > 0 ? "+" : ""}${ev.timeDelta}s<br>gas ${ev.gasDelta > 0 ? "+" : ""}${ev.gasDelta} · ${ev.newContracts} new</div>`;
+      `<div class="card-stats">${ev.txs.length} txs · ${signed(ev.timeDelta)}s<br>${ev.newContracts} new</div>`;
     card.onclick = () => { pinned = i; renderChain(); renderDetail(ev); };
-    chain.appendChild(card);
+    chainInner.appendChild(card);
     if (i < blocks.length - 1) {
       const arrow = document.createElement("span");
       arrow.className = "arrow";
       arrow.textContent = "→";
-      chain.appendChild(arrow);
+      chainInner.appendChild(arrow);
     }
   }
+  const chain = document.getElementById("chain");
   chain.scrollLeft = chain.scrollWidth;
 }
 
 function renderDetail(ev) {
   detail.style.display = "block";
+  const txs = ev.txs || [];
   const bal = ev.bal || [];
-  let userCount = 0, systemCount = 0;
-  let accounts = "";
-  for (const acct of bal) {
-    const hasWrites = acct.storageChanges.length || acct.balanceChanges.length ||
-                      acct.nonceChanges.length || acct.codeChanges.length;
-    if (!hasWrites) continue;
-    if (systemContracts[acct.address]) { systemCount++; continue; }
-    userCount++;
-    accounts += `<div class="acct">${short(acct.address)}</div>`;
-    for (const bc of acct.balanceChanges)
-      accounts += `<div class="chg">balance → <span class="val">${weiToEth(bc.value)} ETH</span> <span class="dim">(tx ${hex2dec(bc.index)})</span></div>`;
-    for (const nc of acct.nonceChanges)
-      accounts += `<div class="chg">nonce → <span class="val">${hex2dec(nc.value)}</span> <span class="dim">(tx ${hex2dec(nc.index)})</span></div>`;
-    for (const sc of acct.storageChanges)
-      for (const chg of sc.changes)
-        accounts += `<div class="chg">slot ${short(sc.key)} = <span class="val">${short(chg.value)}</span> <span class="dim">(tx ${hex2dec(chg.index)})</span></div>`;
-    if (acct.codeChanges.length)
-      accounts += `<div class="chg">code deployed <span class="dim">(${acct.codeChanges.length} changes)</span></div>`;
+
+  let txRows = "";
+  for (let i = 0; i < txs.length; i++) {
+    const tx = txs[i];
+    const val = tx.value && tx.value !== "0x0" ? ` <span class="tx-value">Ξ${weiToEth(tx.value)}</span>` : "";
+    const path = tx.to
+      ? `<span class="tx-path">${short(tx.from)} <span class="arrow">→</span> ${short(tx.to)}</span>`
+      : `<span class="tx-path">${short(tx.from)} <span class="arrow">→</span> <span class="tx-new">contract</span></span>`;
+    txRows += `<div class="tx-row"><span class="tx-idx">#${i}</span><span class="tx-hash">${short(tx.hash)}</span>${path}${val}<span class="tx-type">t${tx.type || "0"}</span></div>`;
   }
+
+  let userCount = 0, systemCount = 0;
+  const groups = new Map();
+  for (const acct of bal) {
+    const chips = [];
+    for (const bc of acct.balanceChanges) chips.push({ idx: bc.index, text: `balance → ${weiToEth(bc.value)} ETH` });
+    for (const nc of acct.nonceChanges) chips.push({ idx: nc.index, text: `nonce → ${hex2dec(nc.value)}` });
+    for (const sc of acct.storageChanges) for (const chg of sc.changes) chips.push({ idx: chg.index, text: `slot ${short(sc.key)} = ${short(chg.value)}` });
+    if (acct.codeChanges.length) chips.push({ idx: acct.codeChanges[0].index, text: `code deployed` });
+    if (!chips.length) continue;
+
+    const isSystem = systemContracts[acct.address];
+    if (isSystem) systemCount++; else userCount++;
+
+    for (const c of chips) {
+      const n = hex2dec(c.idx);
+      if (!groups.has(n)) groups.set(n, []);
+      groups.get(n).push({ acct: acct.address, label: isSystem, text: c.text });
+    }
+  }
+  let balHTML = "";
+  const sorted = [...groups.keys()].sort((a, b) => a - b);
+  for (const n of sorted) {
+    const entries = groups.get(n);
+    let head;
+    if (n === 0) head = `<span class="sys">pre-execution system calls</span>`;
+    else if (n === txs.length + 1) head = `<span class="sys">post-execution system calls</span>`;
+    else head = `tx #${n}` + (txs[n - 1] ? ` · ${short(txs[n - 1].hash)}` : "");
+    balHTML += `<div class="txgroup"><div class="txgroup-head">${head}</div>`;
+    for (const e of entries) {
+      const addr = e.label || short(e.acct);
+      balHTML += `<div class="acct-row"><span class="acct-addr">${addr}</span><span class="chip">${e.text}</span></div>`;
+    }
+    balHTML += `</div>`;
+  }
+
   detailBody.innerHTML =
-    `<div class="detail-head">block ${hex2dec(ev.number)} · ${short(ev.hash)}</div>` +
-    `<div class="diff">gas <span class="${ev.gasDelta >= 0 ? "pos" : "neg"}">${ev.gasDelta > 0 ? "+" : ""}${ev.gasDelta}</span>` +
+    `<div class="detail-head">block ${hex2dec(ev.number)} · ${short(ev.hash)} · +${ev.timeDelta}s</div>` +
+    `<div class="diff">gas <span class="${ev.gasDelta >= 0 ? "pos" : "neg"}">${signed(ev.gasDelta)}</span>` +
     ` · txs <span class="pos">+${ev.txAdded}</span> <span class="neg">-${ev.txRemoved}</span>` +
-    ` · new contracts ${ev.newContracts} · +${ev.timeDelta}s</div>` +
-    `<div class="bal-sum">state changes: ${userCount} user accounts, ${systemCount} system contracts</div>` +
-    accounts;
+    ` · new contracts ${ev.newContracts}</div>` +
+    `<p class="section-label">Transactions (${txs.length})</p>${txRows || '<div class="empty">no transactions</div>'}` +
+    `<p class="section-label">State changes by transaction (block access list)</p>` +
+    `<div class="bal-sum">${userCount} user accounts · ${systemCount} system contracts</div>` +
+    (balHTML || '<div class="empty">no state changes</div>');
+  detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function stateDiffStatus(text) {

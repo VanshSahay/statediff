@@ -66,6 +66,7 @@ func watch(ctx context.Context, rpcURL string) {
 				TxAdded:      len(pb.TxAdded),
 				TxRemoved:    len(pb.TxRemoved),
 				NewContracts: len(pb.NewContracts),
+				Transactions: cur.Transactions,
 				BAL:          bal,
 			})
 			prev = cur

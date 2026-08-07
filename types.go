@@ -116,5 +116,6 @@ type BlockEvent struct {
 	TxAdded      int             `json:"txAdded"`
 	TxRemoved    int             `json:"txRemoved"`
 	NewContracts int             `json:"newContracts"`
+	Transactions []Transaction   `json:"txs"`
 	BAL          BlockAccessList `json:"bal"`
 }
