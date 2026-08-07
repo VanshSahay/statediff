@@ -36,18 +36,20 @@
   #chain { overflow-x: auto; padding: 0.5rem 0.25rem 0.75rem; scrollbar-width: thin; }
   #chain-inner { display: flex; align-items: stretch; gap: 0.4rem; width: max-content; margin: 0 auto; }
   .card { min-width: 132px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; user-select: none; }
+    padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.2s ease, transform 0.2s ease; user-select: none; }
   .card:hover { border-color: var(--accent); transform: translateY(-2px); }
-  .card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .card.live { border-color: var(--accent); }
   .card-num { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 0.25rem; }
-  .card.live .card-num::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 6px;
-    border-radius: 50%; background: var(--accent); vertical-align: middle; animation: pulse 1.6s ease infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   .card-stats { font-family: "JetBrains Mono", monospace; font-size: 0.62rem; color: var(--muted); line-height: 1.5; }
   .arrow { align-self: center; color: var(--muted); font-family: "JetBrains Mono", monospace; font-size: 1.1rem; user-select: none; }
   .empty { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted); padding: 1rem 0; text-align: center; }
-  #detail { display: none; margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.5rem; }
+  #block-view { display: none; }
+  body.in-block #chain-view { display: none; }
+  body.in-block #block-view { display: block; }
+  #block-view .box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1.5rem 1.75rem; }
+  #back { background: none; color: var(--muted); border: 1px solid var(--border); margin: 0 0 1rem; }
+  #back:hover { color: var(--text); border-color: var(--muted); }
   .detail-head { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; }
   .diff { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; margin-bottom: 1.5rem; }
   .diff .pos { color: var(--pos); }
@@ -62,43 +64,40 @@
   .tx-type { font-size: 0.6rem; border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; color: var(--muted); }
   .tx-new { color: var(--pos); }
   .bal-sum { font-size: 0.8rem; color: var(--muted); font-style: italic; margin: 1.25rem 0 0.6rem; }
-  .txgroup { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+  .txgroup { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg);
     padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; }
   .txgroup-head { font-family: "JetBrains Mono", monospace; font-size: 0.65rem; color: var(--muted); margin-bottom: 0.3rem; }
   .txgroup-head .sys { color: var(--muted); font-style: italic; }
   .acct-row { font-family: "JetBrains Mono", monospace; font-size: 0.68rem; padding: 0.15rem 0; display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
   .acct-addr { color: var(--text); }
-  .acct-row .label { color: var(--muted); }
-  .chip { font-size: 0.62rem; border: 1px solid var(--border); border-radius: 3px; padding: 0 5px; background: var(--bg); }
-  .chip.pos { color: var(--pos); border-color: var(--pos); }
-  .chip.neg { color: var(--neg); border-color: var(--neg); }
+  .chip { font-size: 0.62rem; border: 1px solid var(--border); border-radius: 3px; padding: 0 5px; background: var(--surface); }
 </style>
 </head>
 <body>
 <main>
-  <h1>statediff</h1>
-  <p class="subtitle">live block state diffs, straight from the chain's block access list</p>
-  <div class="controls">
-    <input id="rpc" placeholder="https://…trycloudflare.com — devnet RPC">
-    <button id="connect">Connect</button>
-    <button id="stop">Stop</button>
+  <div id="chain-view">
+    <h1>statediff</h1>
+    <p class="subtitle">live block state diffs, straight from the chain's block access list</p>
+    <div class="controls">
+      <input id="rpc" placeholder="https://…trycloudflare.com — devnet RPC">
+      <button id="connect">Connect</button>
+      <button id="stop">Stop</button>
+    </div>
+    <div id="status">idle</div>
+    <p class="section-label">Chain</p>
+    <div id="chain"><div id="chain-inner"><div class="empty">waiting for blocks…</div></div></div>
   </div>
-  <div id="status">idle</div>
-  <p class="section-label">Chain</p>
-  <div id="chain"><div id="chain-inner"><div class="empty">waiting for blocks…</div></div></div>
-  <div id="detail">
-    <p class="section-label">Selected block</p>
-    <div id="detail-body"></div>
+  <div id="block-view">
+    <button id="back">← back</button>
+    <div class="box" id="detail-body"></div>
   </div>
 </main>
 
 <script src="wasm_exec.js"></script>
 <script>
 const chainInner = document.getElementById("chain-inner");
-const detail = document.getElementById("detail");
 const detailBody = document.getElementById("detail-body");
 let blocks = [];
-let pinned = -1;
 
 const systemContracts = {
   "0x000f3df6d732807ef1319fb7b8bb8522d0beac02": "beacon-roots (EIP-4788)",
@@ -113,7 +112,6 @@ function stateDiffBlock(json) {
   const ev = JSON.parse(json);
   blocks.push(ev);
   renderChain();
-  if (pinned >= 0) renderDetail(blocks[pinned], false);
 }
 
 function renderChain() {
@@ -125,11 +123,11 @@ function renderChain() {
   for (let i = 0; i < blocks.length; i++) {
     const ev = blocks[i];
     const card = document.createElement("div");
-    card.className = "card" + (i === blocks.length - 1 ? " live" : "") + (i === pinned ? " selected" : "");
+    card.className = "card" + (i === blocks.length - 1 ? " live" : "");
     card.innerHTML =
       `<div class="card-num">${hex2dec(ev.number)}</div>` +
       `<div class="card-stats">${ev.txs.length} txs · ${signed(ev.timeDelta)}s<br>${ev.newContracts} new</div>`;
-    card.onclick = () => { pinned = i; renderChain(); renderDetail(ev, true); };
+    card.onclick = () => openBlock(ev);
     chainInner.appendChild(card);
     if (i < blocks.length - 1) {
       const arrow = document.createElement("span");
@@ -142,8 +140,13 @@ function renderChain() {
   chain.scrollLeft = chain.scrollWidth;
 }
 
-function renderDetail(ev, scroll) {
-  detail.style.display = "block";
+function openBlock(ev) {
+  renderDetail(ev);
+  document.body.classList.add("in-block");
+  window.scrollTo(0, 0);
+}
+
+function renderDetail(ev) {
   const txs = ev.txs || [];
   const bal = ev.bal || [];
 
@@ -201,7 +204,6 @@ function renderDetail(ev, scroll) {
     `<p class="section-label">State changes by transaction (block access list)</p>` +
     `<div class="bal-sum">${userCount} user accounts · ${systemCount} system contracts</div>` +
     (balHTML || '<div class="empty">no state changes</div>');
-  if (scroll) detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function stateDiffStatus(text) {
@@ -223,12 +225,27 @@ document.getElementById("connect").onclick = () => {
   statediff.start(url);
 };
 document.getElementById("stop").onclick = () => statediff.stop();
+document.getElementById("back").onclick = () => document.body.classList.remove("in-block");
 
 (async () => {
   const go = new Go();
   const buf = await fetch("statediff.wasm").then(r => r.arrayBuffer());
   const { instance } = await WebAssembly.instantiate(buf, go.importObject);
   go.run(instance);
+  try {
+    const r = await fetch("https://raw.githubusercontent.com/VanshSahay/go-ethereum/bal-devnet/devnet/current-url.json");
+    const data = await r.json();
+    if (data.rpc) {
+      document.getElementById("rpc").value = data.rpc;
+      localStorage.setItem("statediff-rpc", data.rpc);
+      stateDiffStatus("latest devnet RPC loaded · connecting…");
+      statediff.start(data.rpc);
+    } else {
+      stateDiffStatus("no devnet running — enter an RPC URL");
+    }
+  } catch (e) {
+    stateDiffStatus("couldn't auto-fetch RPC — enter it manually");
+  }
 })();
 </script>
 </body>
