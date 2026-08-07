@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const rpcURL = "http://127.0.0.1:54512"
-const wsURL = "ws://127.0.0.1:54509"
+const rpcURL = "http://127.0.0.1:63906"
+const wsURL = "ws://127.0.0.1:63908"
 
 func (e *RPCError) Error() string {
 	return fmt.Sprintf("rpc error %d: %s", e.Code, e.Message)
@@ -45,17 +45,22 @@ func runSubscription(ctx context.Context) error {
 	if err := conn.WriteJSON(subReq); err != nil {
 		return err
 	}
+	var ack struct {
+		ID    int       `json:"id"`
+		Error *RPCError `json:"error"`
+	}
 
 	for {
+		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		_, raw, err := conn.ReadMessage()
 		if err != nil {
 			return err
 		}
-		var resp RPCResponse
-		if json.Unmarshal(raw, &resp) == nil && resp.ID == 1 && resp.Error == nil {
+		if json.Unmarshal(raw, &ack) == nil && ack.ID == 1 && ack.Error == nil {
 			break
 		}
 	}
+	conn.SetReadDeadline(time.Time{})
 
 	var prev *Block
 	for {
