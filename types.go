@@ -118,8 +118,21 @@ type BlockEvent struct {
 	TxRemoved    int               `json:"txRemoved"`
 	NewContracts int               `json:"newContracts"`
 	Transactions []Transaction     `json:"txs"`
+	Receipts     []Receipt         `json:"receipts"`
 	BAL          BlockAccessList   `json:"bal"`
 	BalVerified  bool              `json:"balVerified"`
 	BalRLPBytes  int               `json:"balRlpBytes"`
 	SlotLabels   map[string]string `json:"slotLabels"`
+}
+
+type Receipt struct {
+	Status  string       `json:"status"`
+	GasUsed string       `json:"gasUsed"`
+	Logs    []ReceiptLog `json:"logs"`
+}
+
+type ReceiptLog struct {
+	Address string   `json:"address"`
+	Topics  []string `json:"topics"`
+	Data    string   `json:"data"`
 }

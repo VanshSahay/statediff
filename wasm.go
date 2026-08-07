@@ -50,6 +50,10 @@ func watch(ctx context.Context, rpcURL string) {
 			if err != nil {
 				jsError("getBAL: " + err.Error())
 			}
+			receipts, err := getBlockReceipts(ctx, rpcURL, head)
+			if err != nil {
+				receipts = nil
+			}
 
 			if prev == nil {
 				prev = cur
@@ -67,6 +71,7 @@ func watch(ctx context.Context, rpcURL string) {
 				TxRemoved:    len(pb.TxRemoved),
 				NewContracts: len(pb.NewContracts),
 				Transactions: cur.Transactions,
+				Receipts:     receipts,
 				BAL:          bal,
 			}
 			if bal != nil && cur.BlockAccessListHash != "" {

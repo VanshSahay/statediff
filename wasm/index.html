@@ -65,6 +65,10 @@
   .tx-value { color: var(--text); }
   .tx-type { font-size: 0.6rem; border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; color: var(--muted); }
   .tx-new { color: var(--pos); }
+  .ok { color: var(--pos); }
+  .txlogs { font-size: 0.62rem; color: var(--muted); padding-left: 2.2em; }
+  .txlogs summary { cursor: pointer; color: var(--muted); }
+  .log-row { padding-left: 0.5em; border-bottom: 1px dotted var(--border); }
   .verified { color: var(--pos); }
   .unverified { color: var(--neg); }
   .netflow { display: flex; gap: 2rem; flex-wrap: wrap; font-family: "JetBrains Mono", monospace; font-size: 0.68rem; margin-bottom: 1rem; }
@@ -164,13 +168,26 @@ function updateNetFlow() {
 function sparkline(addr) {
   const hist = balanceHistory.get(addr);
   if (!hist || hist.length < 2) return "";
+  const W = 160, H = 40;
   const vals = hist.map(h => h.bal);
   let min = vals[0], max = vals[0];
   for (const v of vals) { if (v < min) min = v; if (v > max) max = v; }
-  const span = max - min || 1n;
-  const pts = vals.map((v, i) =>
-    `${(i / (vals.length - 1) * 120).toFixed(1)},${(28 - Number((v - min) * 28n / span)).toFixed(1)}`).join(" ");
-  return `<svg width="120" height="28" viewBox="0 0 120 28"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`;
+  const span = Number(max - min) || 1;
+  let pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1) * W).toFixed(1);
+    const y = (H - 5 - Number(v - min) * (H - 10) / span).toFixed(1);
+    return `${x},${y}`;
+  });
+  if (pts.length > 80) {
+    const step = Math.ceil(pts.length / 80);
+    pts = pts.filter((_, i) => i % step === 0);
+  }
+  const area = `0,${H} ${pts.join(" ")} ${W},${H}`;
+  const toEth = v => (Number(v / 1000000000000n) / 1000000).toFixed(3);
+  return `<svg width="${W}" height="${H + 13}" viewBox="0 0 ${W} ${H + 13}">` +
+    `<polygon points="${area}" fill="var(--accent)" opacity="0.10"/>` +
+    `<polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>` +
+    `<text x="0" y="${H + 11}" font-size="9" fill="var(--muted)" font-family="JetBrains Mono, monospace">${toEth(vals[0])} → ${toEth(vals[vals.length - 1])} Ξ</text></svg>`;
 }
 
 function renderChain() {
@@ -213,13 +230,21 @@ function renderDetail(ev) {
   const bal = ev.bal || [];
 
   let txRows = "";
+  const rcpts = ev.receipts || [];
   for (let i = 0; i < txs.length; i++) {
     const tx = txs[i];
+    const rcpt = rcpts[i];
     const val = tx.value && tx.value !== "0x0" ? ` <span class="tx-value">Ξ${weiToEth(tx.value)}</span>` : "";
     const path = tx.to
       ? `<span class="tx-path">${short(tx.from)} <span class="arrow">→</span> ${short(tx.to)}</span>`
       : `<span class="tx-path">${short(tx.from)} <span class="arrow">→</span> <span class="tx-new">contract</span></span>`;
-    txRows += `<div class="tx-row"><span class="tx-idx">#${i}</span><span class="tx-hash">${short(tx.hash)}</span>${path}${val}<span class="tx-type">t${hex2dec(tx.type || "0x0")}</span></div>`;
+    const status = rcpt ? (rcpt.status === "0x1" ? `<span class="ok">✓</span>` : `<span class="neg">✗</span>`) : "";
+    const logs = rcpt && rcpt.logs.length
+      ? `<details class="txlogs"><summary>${rcpt.logs.length} logs</summary>` +
+        rcpt.logs.map(l => `<div class="log-row">${short(l.address)} · t0 ${short(l.topics[0] || "")} · ${Math.max(0, (l.data.length - 2) / 2)}B</div>`).join("") +
+        `</details>`
+      : "";
+    txRows += `<div class="tx-row"><span class="tx-idx">#${i}</span><span class="tx-hash">${short(tx.hash)}</span>${path}${val}${status}<span class="tx-type">t${hex2dec(tx.type || "0x0")}</span></div>${logs}`;
   }
 
   let userCount = 0, systemCount = 0;

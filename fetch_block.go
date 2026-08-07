@@ -65,6 +65,33 @@ func getBAL(ctx context.Context, rpcURL, tag string) (BlockAccessList, error) {
 	return r.Result, nil
 }
 
+func getBlockReceipts(ctx context.Context, rpcURL, tag string) ([]Receipt, error) {
+	reqBody, err := json.Marshal(RPCRequest{
+		JSONRPC: "2.0",
+		Method:  "eth_getBlockReceipts",
+		Params:  []any{tag},
+		ID:      1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	resp, err := doRPC(ctx, rpcURL, reqBody)
+	if err != nil {
+		return nil, err
+	}
+	var r struct {
+		Result []Receipt  `json:"result"`
+		Error  *RPCError  `json:"error"`
+	}
+	if err := json.Unmarshal(resp, &r); err != nil {
+		return nil, err
+	}
+	if r.Error != nil {
+		return nil, r.Error
+	}
+	return r.Result, nil
+}
+
 func getBlockByNumber(ctx context.Context, rpcURL, tag string, fullTx bool) (*Block, error) {
 	reqBody, err := json.Marshal(RPCRequest{
 		JSONRPC: "2.0",
