@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"math/big"
 	"strconv"
 	"strings"
@@ -49,7 +48,3 @@ func process(prev, cur *Block) ProcessedBlock {
 	return pb
 }
 
-func main() {
-	ctx := context.Background()
-	livews(ctx)
-}

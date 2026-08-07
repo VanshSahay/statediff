@@ -65,19 +65,6 @@ type RPCError struct {
 	Message string `json:"message"`
 }
 
-type NewHead struct {
-	Number string `json:"number"`
-	Hash   string `json:"hash"`
-}
-
-type SubscriptionMessage struct {
-	Method string `json:"method"`
-	Params *struct {
-		Subscription string  `json:"subscription"`
-		Result       NewHead `json:"result"`
-	} `json:"params"`
-}
-
 type BALResponse struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      int             `json:"id"`

@@ -24,7 +24,19 @@ func weiToEth(hexWei string) string {
 	return f.Text('f', 6)
 }
 
-func renderBAL(blockNum uint64, bal BlockAccessList) {
+func renderDiffHTML(pb ProcessedBlock) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, `<div class="block">block %d <span class="dim">|</span> +%ds <span class="dim">|</span> gas %+d <span class="dim">|</span> txs <span class="pos">+%d</span> <span class="neg">-%d</span> <span class="dim">|</span> new contracts %d</div>`,
+		hexToUint64(pb.Number),
+		pb.TimeDelta,
+		pb.GasDelta,
+		len(pb.TxAdded), len(pb.TxRemoved),
+		len(pb.NewContracts),
+	)
+	return b.String()
+}
+
+func renderBALHTML(blockNum uint64, bal BlockAccessList) string {
 	var systemCount, userCount int
 	var b strings.Builder
 
@@ -38,37 +50,36 @@ func renderBAL(blockNum uint64, bal BlockAccessList) {
 			continue
 		}
 
-		if label, ok := systemContracts[acct.Address]; ok {
+		if _, ok := systemContracts[acct.Address]; ok {
 			systemCount++
-			_ = label
 			continue
 		}
 		userCount++
 
-		fmt.Fprintf(&b, "  %s\n", short(acct.Address))
+		fmt.Fprintf(&b, `<div class="acct">%s</div>`, short(acct.Address))
 
 		for _, bc := range acct.BalanceChanges {
-			fmt.Fprintf(&b, "    balance → %s ETH  (tx %d)\n",
+			fmt.Fprintf(&b, `<div class="chg">balance → <span class="val">%s ETH</span> <span class="dim">(tx %d)</span></div>`,
 				weiToEth(bc.Value), hexToUint64(bc.Index))
 		}
 		for _, nc := range acct.NonceChanges {
-			fmt.Fprintf(&b, "    nonce → %d  (tx %d)\n",
+			fmt.Fprintf(&b, `<div class="chg">nonce → <span class="val">%d</span> <span class="dim">(tx %d)</span></div>`,
 				hexToUint64(nc.Value), hexToUint64(nc.Index))
 		}
 		for _, sc := range acct.StorageChanges {
 			for _, chg := range sc.Changes {
-				fmt.Fprintf(&b, "    slot %s = %s  (tx %d)\n",
+				fmt.Fprintf(&b, `<div class="chg">slot %s = <span class="val">%s</span> <span class="dim">(tx %d)</span></div>`,
 					short(sc.Key), short(chg.Value), hexToUint64(chg.Index))
 			}
 		}
 		if len(acct.CodeChanges) > 0 {
-			fmt.Fprintf(&b, "    code deployed (%d changes)\n", len(acct.CodeChanges))
+			fmt.Fprintf(&b, `<div class="chg">code deployed <span class="dim">(%d changes)</span></div>`, len(acct.CodeChanges))
 		}
 	}
 
-	fmt.Printf("── block %d state changes: %d user accounts, %d system contracts ──\n",
+	var out strings.Builder
+	fmt.Fprintf(&out, `<div class="bal">── block %d state changes: %d user accounts, %d system contracts ──</div>`,
 		blockNum, userCount, systemCount)
-	if b.Len() > 0 {
-		fmt.Print(b.String())
-	}
+	out.WriteString(b.String())
+	return out.String()
 }

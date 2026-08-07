@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>statediff — live block state diffs</title>
+<style>
+  :root { color-scheme: dark; }
+  body { background: #0d1117; color: #e6edf3; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; }
+  header { padding: 16px 20px; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .sub { color: #8b949e; font-size: 12px; }
+  input { background: #161b22; border: 1px solid #30363d; color: #e6edf3; border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 12px; width: 340px; }
+  button { background: #238636; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-family: inherit; font-size: 12px; cursor: pointer; }
+  button.stop { background: #da3633; }
+  #status { padding: 8px 20px; font-size: 12px; color: #8b949e; border-bottom: 1px solid #21262d; min-height: 16px; }
+  #status.err { color: #f85149; }
+  #out { padding: 12px 20px; font-size: 12px; line-height: 1.6; }
+  .block { color: #58a6ff; margin: 8px 0 2px; }
+  .bal { color: #8b949e; margin-top: 8px; }
+  .acct { color: #d2a8ff; margin-top: 4px; }
+  .chg { color: #c9d1d9; padding-left: 16px; }
+  .val { color: #3fb950; }
+  .pos { color: #3fb950; }
+  .neg { color: #f85149; }
+  .dim { color: #484f58; }
+</style>
+</head>
+<body>
+<header>
+  <h1>statediff</h1>
+  <span class="sub">live block state diffs via eth_getBlockAccessList</span>
+  <input id="rpc" placeholder="https://…trycloudflare.com (devnet RPC)">
+  <button id="connect">Connect</button>
+  <button id="stop" class="stop">Stop</button>
+</header>
+<div id="status">idle</div>
+<div id="out"></div>
+
+<script src="wasm_exec.js"></script>
+<script>
+function stateDiffAppend(html) {
+  const out = document.getElementById("out");
+  out.insertAdjacentHTML("afterbegin", html);
+}
+function stateDiffStatus(text) {
+  const s = document.getElementById("status");
+  s.textContent = text;
+  s.classList.remove("err");
+}
+function stateDiffError(text) {
+  const s = document.getElementById("status");
+  s.textContent = "⚠ " + text;
+  s.classList.add("err");
+}
+document.getElementById("rpc").value = localStorage.getItem("statediff-rpc") || "";
+document.getElementById("connect").onclick = () => {
+  const url = document.getElementById("rpc").value.trim();
+  if (!url) return stateDiffError("enter an RPC URL");
+  localStorage.setItem("statediff-rpc", url);
+  statediff.start(url);
+};
+document.getElementById("stop").onclick = () => statediff.stop();
+
+(async () => {
+  const go = new Go();
+  const buf = await fetch("statediff.wasm").then(r => r.arrayBuffer());
+  const { instance } = await WebAssembly.instantiate(buf, go.importObject);
+  go.run(instance);
+})();
+</script>
+</body>
+</html>
