@@ -2,46 +2,156 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>statediff — live block state diffs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: dark; }
-  body { background: #0d1117; color: #e6edf3; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; }
-  header { padding: 16px 20px; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  h1 { font-size: 16px; margin: 0; font-weight: 600; }
-  .sub { color: #8b949e; font-size: 12px; }
-  input { background: #161b22; border: 1px solid #30363d; color: #e6edf3; border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 12px; width: 340px; }
-  button { background: #238636; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-family: inherit; font-size: 12px; cursor: pointer; }
-  button.stop { background: #da3633; }
-  #status { padding: 8px 20px; font-size: 12px; color: #8b949e; border-bottom: 1px solid #21262d; min-height: 16px; }
-  #status.err { color: #f85149; }
-  #out { padding: 12px 20px; font-size: 12px; line-height: 1.6; }
-  .block { color: #58a6ff; margin: 8px 0 2px; }
-  .bal { color: #8b949e; margin-top: 8px; }
-  .acct { color: #d2a8ff; margin-top: 4px; }
-  .chg { color: #c9d1d9; padding-left: 16px; }
-  .val { color: #3fb950; }
-  .pos { color: #3fb950; }
-  .neg { color: #f85149; }
-  .dim { color: #484f58; }
+  :root {
+    --bg: #f4efe8; --surface: #faf7f3; --text: #2c2825; --muted: #8a8278;
+    --accent: #3d7068; --accent-hover: #2a544d; --border: #e5ded5;
+    --radius: 4px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 18px; -webkit-font-smoothing: antialiased; background: var(--bg); }
+  body { font-family: "Fraunces", Georgia, serif; color: var(--text); line-height: 1.65; min-height: 100vh; }
+  main { max-width: 760px; margin: 0 auto; padding: 3rem 1.5rem 3rem; }
+  h1 { font-size: 2.6rem; font-weight: 400; letter-spacing: -0.015em; line-height: 1.1; margin-bottom: 0.35rem; }
+  .subtitle { color: var(--muted); margin-bottom: 1.5rem; max-width: 46ch; }
+  .section-label { font-size: 0.8rem; color: var(--muted); font-style: italic; margin-bottom: 0.75rem; }
+  .controls { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  input { font-family: "JetBrains Mono", monospace; font-size: 0.75rem; background: var(--surface);
+    border: 1px solid var(--border); color: var(--text); border-radius: var(--radius); padding: 0.5rem 0.7rem; flex: 1; min-width: 240px; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; font-weight: 500; cursor: pointer;
+    border-radius: var(--radius); padding: 0.5rem 1rem; letter-spacing: 0.02em; }
+  #connect { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+  #connect:hover { background: var(--accent-hover); }
+  #stop { background: none; color: var(--muted); border: 1px solid var(--border); }
+  #stop:hover { color: var(--text); border-color: var(--muted); }
+  #status { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted);
+    padding: 0.5rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; min-height: 1.6em; }
+  #status.err { color: #a4443c; }
+  #chain { display: flex; align-items: stretch; gap: 0.4rem; overflow-x: auto; padding: 0.5rem 0.25rem 1rem; }
+  .card { min-width: 132px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0.6rem 0.8rem; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; user-select: none; }
+  .card:hover { border-color: var(--accent); }
+  .card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .card.live { border-color: var(--accent); }
+  .card-num { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 0.25rem; }
+  .card.live .card-num::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 6px;
+    border-radius: 50%; background: var(--accent); vertical-align: middle; animation: pulse 1.6s ease infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .card-stats { font-family: "JetBrains Mono", monospace; font-size: 0.62rem; color: var(--muted); line-height: 1.5; }
+  .arrow { align-self: center; color: var(--border); font-family: "JetBrains Mono", monospace; font-size: 1rem; user-select: none; }
+  .empty { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted); padding: 1rem 0; }
+  #detail { display: none; }
+  .detail-head { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.4rem; }
+  .diff { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; margin-bottom: 1rem; }
+  .diff .pos { color: var(--accent); }
+  .diff .neg { color: #a4443c; }
+  .bal-sum { font-size: 0.8rem; color: var(--muted); font-style: italic; margin-bottom: 0.75rem; }
+  .acct { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; font-weight: 500; margin-top: 0.6rem; }
+  .acct .label { color: var(--muted); font-weight: 400; }
+  .chg { font-family: "JetBrains Mono", monospace; font-size: 0.68rem; padding-left: 1.1rem; color: var(--text); }
+  .chg .val { color: var(--accent); }
+  .chg .dim { color: var(--muted); }
 </style>
 </head>
 <body>
-<header>
+<main>
   <h1>statediff</h1>
-  <span class="sub">live block state diffs via eth_getBlockAccessList</span>
-  <input id="rpc" placeholder="https://…trycloudflare.com (devnet RPC)">
-  <button id="connect">Connect</button>
-  <button id="stop" class="stop">Stop</button>
-</header>
-<div id="status">idle</div>
-<div id="out"></div>
+  <p class="subtitle">live block state diffs, straight from the chain's block access list</p>
+  <div class="controls">
+    <input id="rpc" placeholder="https://…trycloudflare.com — devnet RPC">
+    <button id="connect">Connect</button>
+    <button id="stop">Stop</button>
+  </div>
+  <div id="status">idle</div>
+  <p class="section-label">Chain</p>
+  <div id="chain"><div class="empty">waiting for blocks…</div></div>
+  <div id="detail">
+    <p class="section-label">Selected block</p>
+    <div id="detail-body"></div>
+  </div>
+</main>
 
 <script src="wasm_exec.js"></script>
 <script>
-function stateDiffAppend(html) {
-  const out = document.getElementById("out");
-  out.insertAdjacentHTML("afterbegin", html);
+const chain = document.getElementById("chain");
+const detail = document.getElementById("detail");
+const detailBody = document.getElementById("detail-body");
+let blocks = [];
+let pinned = -1;
+
+const systemContracts = {
+  "0x000f3df6d732807ef1319fb7b8bb8522d0beac02": "beacon-roots (EIP-4788)",
+  "0x0000f90827f1c53a10cb7a02335b175320002935": "blockhash-history (EIP-2935)",
+};
+const hex2dec = h => parseInt(h, 16);
+const weiToEth = h => (Number(BigInt(h) / 1000000000000n) / 1000000).toFixed(6);
+const short = a => a.length <= 12 ? a : a.slice(0, 8) + "…" + a.slice(-4);
+
+function stateDiffBlock(json) {
+  const ev = JSON.parse(json);
+  blocks.push(ev);
+  renderChain();
+  if (pinned >= 0) renderDetail(blocks[pinned]);
 }
+
+function renderChain() {
+  chain.innerHTML = "";
+  for (let i = 0; i < blocks.length; i++) {
+    const ev = blocks[i];
+    const card = document.createElement("div");
+    card.className = "card" + (i === blocks.length - 1 ? " live" : "") + (i === pinned ? " selected" : "");
+    card.innerHTML =
+      `<div class="card-num">${hex2dec(ev.number)}</div>` +
+      `<div class="card-stats">${ev.txAdded} txs · ${ev.timeDelta > 0 ? "+" : ""}${ev.timeDelta}s<br>gas ${ev.gasDelta > 0 ? "+" : ""}${ev.gasDelta} · ${ev.newContracts} new</div>`;
+    card.onclick = () => { pinned = i; renderChain(); renderDetail(ev); };
+    chain.appendChild(card);
+    if (i < blocks.length - 1) {
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = "→";
+      chain.appendChild(arrow);
+    }
+  }
+  chain.scrollLeft = chain.scrollWidth;
+}
+
+function renderDetail(ev) {
+  detail.style.display = "block";
+  const bal = ev.bal || [];
+  let userCount = 0, systemCount = 0;
+  let accounts = "";
+  for (const acct of bal) {
+    const hasWrites = acct.storageChanges.length || acct.balanceChanges.length ||
+                      acct.nonceChanges.length || acct.codeChanges.length;
+    if (!hasWrites) continue;
+    if (systemContracts[acct.address]) { systemCount++; continue; }
+    userCount++;
+    accounts += `<div class="acct">${short(acct.address)}</div>`;
+    for (const bc of acct.balanceChanges)
+      accounts += `<div class="chg">balance → <span class="val">${weiToEth(bc.value)} ETH</span> <span class="dim">(tx ${hex2dec(bc.index)})</span></div>`;
+    for (const nc of acct.nonceChanges)
+      accounts += `<div class="chg">nonce → <span class="val">${hex2dec(nc.value)}</span> <span class="dim">(tx ${hex2dec(nc.index)})</span></div>`;
+    for (const sc of acct.storageChanges)
+      for (const chg of sc.changes)
+        accounts += `<div class="chg">slot ${short(sc.key)} = <span class="val">${short(chg.value)}</span> <span class="dim">(tx ${hex2dec(chg.index)})</span></div>`;
+    if (acct.codeChanges.length)
+      accounts += `<div class="chg">code deployed <span class="dim">(${acct.codeChanges.length} changes)</span></div>`;
+  }
+  detailBody.innerHTML =
+    `<div class="detail-head">block ${hex2dec(ev.number)} · ${short(ev.hash)}</div>` +
+    `<div class="diff">gas <span class="${ev.gasDelta >= 0 ? "pos" : "neg"}">${ev.gasDelta > 0 ? "+" : ""}${ev.gasDelta}</span>` +
+    ` · txs <span class="pos">+${ev.txAdded}</span> <span class="neg">-${ev.txRemoved}</span>` +
+    ` · new contracts ${ev.newContracts} · +${ev.timeDelta}s</div>` +
+    `<div class="bal-sum">state changes: ${userCount} user accounts, ${systemCount} system contracts</div>` +
+    accounts;
+}
+
 function stateDiffStatus(text) {
   const s = document.getElementById("status");
   s.textContent = text;
@@ -52,6 +162,7 @@ function stateDiffError(text) {
   s.textContent = "⚠ " + text;
   s.classList.add("err");
 }
+
 document.getElementById("rpc").value = localStorage.getItem("statediff-rpc") || "";
 document.getElementById("connect").onclick = () => {
   const url = document.getElementById("rpc").value.trim();

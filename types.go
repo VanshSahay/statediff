@@ -107,3 +107,14 @@ type StorageChange struct {
 }
 
 type BlockAccessList = []AccountAccess
+
+type BlockEvent struct {
+	Number       string          `json:"number"`
+	Hash         string          `json:"hash"`
+	GasDelta     int64           `json:"gasDelta"`
+	TimeDelta    int64           `json:"timeDelta"`
+	TxAdded      int             `json:"txAdded"`
+	TxRemoved    int             `json:"txRemoved"`
+	NewContracts int             `json:"newContracts"`
+	BAL          BlockAccessList `json:"bal"`
+}

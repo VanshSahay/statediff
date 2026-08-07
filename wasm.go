@@ -4,13 +4,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"syscall/js"
 	"time"
 )
 
-func jsAppend(html string) {
-	js.Global().Call("stateDiffAppend", html)
+func jsBlock(ev BlockEvent) {
+	b, _ := json.Marshal(ev)
+	js.Global().Call("stateDiffBlock", string(b))
 }
 
 func jsStatus(text string) {
@@ -56,10 +58,16 @@ func watch(ctx context.Context, rpcURL string) {
 			}
 
 			pb := process(prev, cur)
-			jsAppend(renderDiffHTML(pb))
-			if bal != nil {
-				jsAppend(renderBALHTML(hexToUint64(cur.Number), bal))
-			}
+			jsBlock(BlockEvent{
+				Number:       cur.Number,
+				Hash:         cur.Hash,
+				GasDelta:     pb.GasDelta,
+				TimeDelta:    pb.TimeDelta,
+				TxAdded:      len(pb.TxAdded),
+				TxRemoved:    len(pb.TxRemoved),
+				NewContracts: len(pb.NewContracts),
+				BAL:          bal,
+			})
 			prev = cur
 		}
 	}
