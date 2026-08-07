@@ -77,7 +77,7 @@ func watch(ctx context.Context, rpcURL string) {
 			if bal != nil && cur.BlockAccessListHash != "" {
 				ev.BalVerified, ev.BalRLPBytes = verifyBAL(bal, cur.BlockAccessListHash)
 			}
-			ev.SlotLabels = buildSlotLabels(bal)
+			ev.SlotLabels = buildSlotLabels(bal, cur.Transactions)
 			jsBlock(ev)
 			prev = cur
 		}

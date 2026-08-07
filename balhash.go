@@ -128,11 +128,23 @@ func verifyBAL(list BlockAccessList, wantHash string) (bool, int) {
 	return got == strings.TrimPrefix(strings.TrimSpace(wantHash), "0x"), len(enc)
 }
 
-func buildSlotLabels(bal BlockAccessList) map[string]string {
+func buildSlotLabels(bal BlockAccessList, txs []Transaction) map[string]string {
 	labels := make(map[string]string)
+	probes := make(map[string]string)
+	for _, tx := range txs {
+		if tx.From != "" {
+			probes[balSlot0(tx.From)] = "balanceOf(" + shortAddr(tx.From) + ")"
+		}
+		if tx.To != "" {
+			probes[balSlot0(tx.To)] = "balanceOf(" + shortAddr(tx.To) + ")"
+		}
+	}
+	if len(probes) == 0 {
+		return labels
+	}
 	for _, acct := range bal {
 		for _, sc := range acct.StorageChanges {
-			if label := slotLabel(acct.Address, sc.Key); label != "" {
+			if label, ok := probes[strings.TrimPrefix(sc.Key, "0x")]; ok {
 				labels[acct.Address+":"+sc.Key] = label
 			}
 		}
@@ -140,19 +152,23 @@ func buildSlotLabels(bal BlockAccessList) map[string]string {
 	return labels
 }
 
-func slotLabel(owner, key string) string {
-	addr := hexBytes(owner)
-	if len(addr) != 20 {
+func shortAddr(a string) string {
+	if len(a) <= 12 {
+		return a
+	}
+	return a[:8] + "…" + a[len(a)-4:]
+}
+
+func balSlot0(addr string) string {
+	b := hexBytes(addr)
+	if len(b) != 20 {
 		return ""
 	}
 	var buf []byte
 	buf = append(buf, make([]byte, 12)...)
-	buf = append(buf, addr...)
+	buf = append(buf, b...)
 	buf = append(buf, make([]byte, 32)...)
 	h := sha3.NewLegacyKeccak256()
 	h.Write(buf)
-	if hex.EncodeToString(h.Sum(nil)) == strings.TrimPrefix(key, "0x") {
-		return "balanceOf(self) · ERC-20 mapping slot 0"
-	}
-	return ""
+	return hex.EncodeToString(h.Sum(nil))
 }

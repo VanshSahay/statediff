@@ -33,10 +33,19 @@ func TestVerifyBALNegative(t *testing.T) {
 	}
 }
 
-func TestSlotLabel(t *testing.T) {
-	owner := "0x8943545177806ED17B9F23F0a21ee5948eCaa776"
-	got := slotLabel(owner, "")
-	if got != "" {
-		t.Fatalf("empty key should have no label, got %q", got)
+func TestSlotLabelProbe(t *testing.T) {
+	addr := "0x8943545177806ED17B9F23F0a21ee5948eCaa776"
+	slot := balSlot0(addr)
+	if slot == "" {
+		t.Fatal("expected a probe slot for a valid address")
+	}
+	bal := BlockAccessList{{Address: "0x1111111111111111111111111111111111111111", StorageChanges: []SlotChanges{{Key: "0x" + slot}}}}
+	txs := []Transaction{{From: addr}}
+	labels := buildSlotLabels(bal, txs)
+	if len(labels) != 1 {
+		t.Fatalf("expected 1 label, got %d", len(labels))
+	}
+	if got := labels["0x1111111111111111111111111111111111111111:0x"+slot]; got == "" {
+		t.Fatal("expected a balanceOf label on the matching slot")
 	}
 }
