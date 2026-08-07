@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const rpcURL = "http://127.0.0.1:63906"
-const wsURL = "ws://127.0.0.1:63908"
+const rpcURL = "https://sensors-raises-edwards-task.trycloudflare.com"
+const wsURL = "wss://received-reproduction-compatible-recreation.trycloudflare.com"
 
 func (e *RPCError) Error() string {
 	return fmt.Sprintf("rpc error %d: %s", e.Code, e.Message)
@@ -87,7 +87,7 @@ func runSubscription(ctx context.Context) error {
 		if err != nil {
 			log.Println("getBAL: ", err)
 		} else {
-			fmt.Println(bal)
+			renderBAL(hexToUint64(cur.Number), bal)
 		}
 
 		if prev == nil {

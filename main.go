@@ -2,12 +2,19 @@ package main
 
 import (
 	"context"
+	"math/big"
 	"strconv"
 	"strings"
 )
 
 func hexToUint64(s string) uint64 {
 	n, _ := strconv.ParseUint(strings.TrimPrefix(s, "0x"), 16, 64)
+	return n
+}
+
+func hexToBig(s string) *big.Int {
+	n := new(big.Int)
+	n.SetString(strings.TrimPrefix(s, "0x"), 16)
 	return n
 }
 
