@@ -58,7 +58,7 @@ func watch(ctx context.Context, rpcURL string) {
 			}
 
 			pb := process(prev, cur)
-			jsBlock(BlockEvent{
+			ev := BlockEvent{
 				Number:       cur.Number,
 				Hash:         cur.Hash,
 				GasDelta:     pb.GasDelta,
@@ -68,7 +68,12 @@ func watch(ctx context.Context, rpcURL string) {
 				NewContracts: len(pb.NewContracts),
 				Transactions: cur.Transactions,
 				BAL:          bal,
-			})
+			}
+			if bal != nil && cur.BlockAccessListHash != "" {
+				ev.BalVerified, ev.BalRLPBytes = verifyBAL(bal, cur.BlockAccessListHash)
+			}
+			ev.SlotLabels = buildSlotLabels(bal)
+			jsBlock(ev)
 			prev = cur
 		}
 	}

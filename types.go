@@ -13,7 +13,8 @@ type Transaction struct {
 }
 
 type Block struct {
-	GasLimit         string        `json:"gasLimit"`
+	BlockAccessListHash string        `json:"blockAccessListHash"`
+	GasLimit            string        `json:"gasLimit"`
 	GasUsed          string        `json:"gasUsed"`
 	Hash             string        `json:"hash"`
 	LogsBloom        string        `json:"logsBloom"`
@@ -109,13 +110,16 @@ type StorageChange struct {
 type BlockAccessList = []AccountAccess
 
 type BlockEvent struct {
-	Number       string          `json:"number"`
-	Hash         string          `json:"hash"`
-	GasDelta     int64           `json:"gasDelta"`
-	TimeDelta    int64           `json:"timeDelta"`
-	TxAdded      int             `json:"txAdded"`
-	TxRemoved    int             `json:"txRemoved"`
-	NewContracts int             `json:"newContracts"`
-	Transactions []Transaction   `json:"txs"`
-	BAL          BlockAccessList `json:"bal"`
+	Number       string            `json:"number"`
+	Hash         string            `json:"hash"`
+	GasDelta     int64             `json:"gasDelta"`
+	TimeDelta    int64             `json:"timeDelta"`
+	TxAdded      int               `json:"txAdded"`
+	TxRemoved    int               `json:"txRemoved"`
+	NewContracts int               `json:"newContracts"`
+	Transactions []Transaction     `json:"txs"`
+	BAL          BlockAccessList   `json:"bal"`
+	BalVerified  bool              `json:"balVerified"`
+	BalRLPBytes  int               `json:"balRlpBytes"`
+	SlotLabels   map[string]string `json:"slotLabels"`
 }

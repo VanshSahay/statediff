@@ -65,6 +65,14 @@
   .tx-value { color: var(--text); }
   .tx-type { font-size: 0.6rem; border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; color: var(--muted); }
   .tx-new { color: var(--pos); }
+  .verified { color: var(--pos); }
+  .unverified { color: var(--neg); }
+  .netflow { display: flex; gap: 2rem; flex-wrap: wrap; font-family: "JetBrains Mono", monospace; font-size: 0.68rem; margin-bottom: 1rem; }
+  .netflow .col { flex: 1; min-width: 200px; }
+  .netflow .row { display: flex; justify-content: space-between; padding: 0.15rem 0; border-bottom: 1px dotted var(--border); }
+  .netflow .gain { color: var(--pos); }
+  .netflow .loss { color: var(--neg); }
+  .spark { margin: 0.15rem 0 0.4rem 1.1rem; }
   .bal-sum { font-size: 0.8rem; color: var(--muted); font-style: italic; margin: 1.25rem 0 0.6rem; }
   .txgroup { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg);
     padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; }
@@ -89,6 +97,8 @@
   <div id="chain-view">
     <p class="section-label">Chain</p>
     <div id="chain"><div id="chain-inner"><div class="empty">waiting for blocks…</div></div></div>
+    <p class="section-label" id="flow-label" style="display:none">Net flow since connect</p>
+    <div id="netflow"></div>
   </div>
   <div id="block-view">
     <button id="back">← back</button>
@@ -100,7 +110,10 @@
 <script>
 const chainInner = document.getElementById("chain-inner");
 const detailBody = document.getElementById("detail-body");
+const netflowEl = document.getElementById("netflow");
+const flowLabel = document.getElementById("flow-label");
 let blocks = [];
+const balanceHistory = new Map();
 
 const systemContracts = {
   "0x000f3df6d732807ef1319fb7b8bb8522d0beac02": "beacon-roots (EIP-4788)",
@@ -114,7 +127,50 @@ const signed = n => (n > 0 ? "+" : "") + n;
 function stateDiffBlock(json) {
   const ev = JSON.parse(json);
   blocks.push(ev);
+  recordBalances(ev);
   renderChain();
+  updateNetFlow();
+}
+
+function recordBalances(ev) {
+  for (const acct of ev.bal || []) {
+    if (!acct.balanceChanges.length) continue;
+    const last = acct.balanceChanges[acct.balanceChanges.length - 1];
+    const hist = balanceHistory.get(acct.address) || [];
+    hist.push({ block: hex2dec(ev.number), bal: BigInt(last.value) });
+    balanceHistory.set(acct.address, hist);
+  }
+}
+
+function updateNetFlow() {
+  const rows = [];
+  for (const [addr, hist] of balanceHistory) {
+    if (hist.length < 2) continue;
+    const delta = hist[hist.length - 1].bal - hist[0].bal;
+    if (delta !== 0n) rows.push({ addr, delta });
+  }
+  if (!rows.length) { netflowEl.innerHTML = ""; flowLabel.style.display = "none"; return; }
+  rows.sort((a, b) => Number(b.delta - a.delta));
+  flowLabel.style.display = "";
+  const top = rows.slice(0, 4), bottom = rows.slice(-4).reverse();
+  const fmt = d => (Number(d / 1000000000000n) / 1000000).toFixed(4);
+  const col = (list, cls) => list.map(r =>
+    `<div class="row"><span>${short(r.addr)}</span><span class="${cls}">${r.delta > 0n ? "+" : ""}${fmt(r.delta)} Ξ</span></div>`).join("");
+  netflowEl.innerHTML =
+    `<div class="netflow"><div class="col"><div class="dim">gained</div>${col(top, "gain")}</div>` +
+    `<div class="col"><div class="dim">lost</div>${col(bottom, "loss")}</div></div>`;
+}
+
+function sparkline(addr) {
+  const hist = balanceHistory.get(addr);
+  if (!hist || hist.length < 2) return "";
+  const vals = hist.map(h => h.bal);
+  let min = vals[0], max = vals[0];
+  for (const v of vals) { if (v < min) min = v; if (v > max) max = v; }
+  const span = max - min || 1n;
+  const pts = vals.map((v, i) =>
+    `${(i / (vals.length - 1) * 120).toFixed(1)},${(28 - Number((v - min) * 28n / span)).toFixed(1)}`).join(" ");
+  return `<svg width="120" height="28" viewBox="0 0 120 28"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>`;
 }
 
 function renderChain() {
@@ -172,8 +228,17 @@ function renderDetail(ev) {
     const chips = [];
     for (const bc of acct.balanceChanges) chips.push({ idx: bc.index, text: `balance → ${weiToEth(bc.value)} ETH` });
     for (const nc of acct.nonceChanges) chips.push({ idx: nc.index, text: `nonce → ${hex2dec(nc.value)}` });
-    for (const sc of acct.storageChanges) for (const chg of sc.changes) chips.push({ idx: chg.index, text: `slot ${short(sc.key)} = ${short(chg.value)}` });
-    if (acct.codeChanges.length) chips.push({ idx: acct.codeChanges[0].index, text: `code deployed` });
+    for (const sc of acct.storageChanges) {
+      const label = (ev.slotLabels || {})[acct.address + ":" + sc.key];
+      for (const chg of sc.changes) {
+        const prefix = label ? `[${label}] ` : "";
+        chips.push({ idx: chg.index, text: prefix + `slot ${short(sc.key)} = ${short(chg.value)}` });
+      }
+    }
+    for (const cc of acct.codeChanges) {
+      const size = Math.max(0, cc.code.length / 2 - 1);
+      chips.push({ idx: cc.index, text: `code deployed · ${size} bytes · ${short(cc.code)}` });
+    }
     if (!chips.length) continue;
 
     const isSystem = systemContracts[acct.address];
@@ -196,13 +261,20 @@ function renderDetail(ev) {
     balHTML += `<div class="txgroup"><div class="txgroup-head">${head}</div>`;
     for (const e of entries) {
       const addr = e.label || short(e.acct);
-      balHTML += `<div class="acct-row"><span class="acct-addr">${addr}</span><span class="chip">${e.text}</span></div>`;
+      const spark = balanceHistory.has(e.acct) && balanceHistory.get(e.acct).length > 1
+        ? `<div class="acct-row"><span class="dim" style="cursor:pointer" onclick="toggleSpark(this,'${e.acct}')">${addr} ▸ balance history</span></div>`
+        : "";
+      balHTML += `<div class="acct-row"><span class="acct-addr">${addr}</span><span class="chip">${e.text}</span></div>${spark}`;
     }
     balHTML += `</div>`;
   }
 
+  const badge = ev.balVerified
+    ? ` <span class="verified">✓ BAL verified (${(ev.balRlpBytes / 1024).toFixed(1)} KB RLP vs header)</span>`
+    : (ev.bal ? ` <span class="unverified">✗ BAL hash mismatch</span>` : "");
+
   detailBody.innerHTML =
-    `<div class="detail-head">block ${hex2dec(ev.number)} · ${short(ev.hash)} · +${ev.timeDelta}s</div>` +
+    `<div class="detail-head">block ${hex2dec(ev.number)} · ${short(ev.hash)} · +${ev.timeDelta}s${badge}</div>` +
     `<div class="diff">gas <span class="${ev.gasDelta >= 0 ? "pos" : "neg"}">${signed(ev.gasDelta)}</span>` +
     ` · txs <span class="pos">+${ev.txAdded}</span> <span class="neg">-${ev.txRemoved}</span>` +
     ` · new contracts ${ev.newContracts}</div>` +
@@ -210,6 +282,19 @@ function renderDetail(ev) {
     `<p class="section-label">State changes by transaction (block access list)</p>` +
     `<div class="bal-sum">${userCount} user accounts · ${systemCount} system contracts</div>` +
     (balHTML || '<div class="empty">no state changes</div>');
+}
+
+function toggleSpark(elm, addr) {
+  if (elm._spark) {
+    elm._spark.remove();
+    elm._spark = null;
+    return;
+  }
+  const box = document.createElement("div");
+  box.className = "spark";
+  box.innerHTML = sparkline(addr);
+  elm.parentNode.appendChild(box);
+  elm._spark = box;
 }
 
 function stateDiffStatus(text) {
