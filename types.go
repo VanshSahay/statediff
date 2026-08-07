@@ -72,8 +72,51 @@ type NewHead struct {
 
 type SubscriptionMessage struct {
 	Method string `json:"method"`
-	Params struct {
+	Params *struct {
 		Subscription string  `json:"subscription"`
 		Result       NewHead `json:"result"`
 	} `json:"params"`
 }
+
+type BALResponse struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      int             `json:"id"`
+	Result  []AccountAccess `json:"result"`
+	Error   *RPCError       `json:"error"`
+}
+
+type AccountAccess struct {
+	Address        string          `json:"address"`
+	BalanceChanges []BalanceChange `json:"balanceChanges"`
+	CodeChanges    []CodeChange    `json:"codeChanges"`
+	NonceChanges   []NonceChange   `json:"nonceChanges"`
+	StorageChanges []SlotChanges   `json:"storageChanges"`
+	StorageReads   []string        `json:"storageReads"`
+}
+
+type BalanceChange struct {
+	Index string `json:"index"`
+	Value string `json:"value"`
+}
+
+type CodeChange struct {
+	Code  string `json:"code"`
+	Index string `json:"index"`
+}
+
+type NonceChange struct {
+	Index string `json:"index"`
+	Value string `json:"value"`
+}
+
+type SlotChanges struct {
+	Key     string          `json:"key"`
+	Changes []StorageChange `json:"changes"`
+}
+
+type StorageChange struct {
+	Index string `json:"index"`
+	Value string `json:"value"`
+}
+
+type BlockAccessList = []AccountAccess
