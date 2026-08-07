@@ -45,7 +45,7 @@
     border-radius: 50%; background: var(--accent); vertical-align: middle; animation: pulse 1.6s ease infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   .card-stats { font-family: "JetBrains Mono", monospace; font-size: 0.62rem; color: var(--muted); line-height: 1.5; }
-  .arrow { align-self: center; color: var(--border); font-family: "JetBrains Mono", monospace; font-size: 1rem; user-select: none; }
+  .arrow { align-self: center; color: var(--muted); font-family: "JetBrains Mono", monospace; font-size: 1.1rem; user-select: none; }
   .empty { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--muted); padding: 1rem 0; text-align: center; }
   #detail { display: none; margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1.5rem; }
   .detail-head { font-family: "JetBrains Mono", monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; }
@@ -113,7 +113,7 @@ function stateDiffBlock(json) {
   const ev = JSON.parse(json);
   blocks.push(ev);
   renderChain();
-  if (pinned >= 0) renderDetail(blocks[pinned]);
+  if (pinned >= 0) renderDetail(blocks[pinned], false);
 }
 
 function renderChain() {
@@ -129,7 +129,7 @@ function renderChain() {
     card.innerHTML =
       `<div class="card-num">${hex2dec(ev.number)}</div>` +
       `<div class="card-stats">${ev.txs.length} txs · ${signed(ev.timeDelta)}s<br>${ev.newContracts} new</div>`;
-    card.onclick = () => { pinned = i; renderChain(); renderDetail(ev); };
+    card.onclick = () => { pinned = i; renderChain(); renderDetail(ev, true); };
     chainInner.appendChild(card);
     if (i < blocks.length - 1) {
       const arrow = document.createElement("span");
@@ -142,7 +142,7 @@ function renderChain() {
   chain.scrollLeft = chain.scrollWidth;
 }
 
-function renderDetail(ev) {
+function renderDetail(ev, scroll) {
   detail.style.display = "block";
   const txs = ev.txs || [];
   const bal = ev.bal || [];
@@ -154,7 +154,7 @@ function renderDetail(ev) {
     const path = tx.to
       ? `<span class="tx-path">${short(tx.from)} <span class="arrow">→</span> ${short(tx.to)}</span>`
       : `<span class="tx-path">${short(tx.from)} <span class="arrow">→</span> <span class="tx-new">contract</span></span>`;
-    txRows += `<div class="tx-row"><span class="tx-idx">#${i}</span><span class="tx-hash">${short(tx.hash)}</span>${path}${val}<span class="tx-type">t${tx.type || "0"}</span></div>`;
+    txRows += `<div class="tx-row"><span class="tx-idx">#${i}</span><span class="tx-hash">${short(tx.hash)}</span>${path}${val}<span class="tx-type">t${hex2dec(tx.type || "0x0")}</span></div>`;
   }
 
   let userCount = 0, systemCount = 0;
@@ -201,7 +201,7 @@ function renderDetail(ev) {
     `<p class="section-label">State changes by transaction (block access list)</p>` +
     `<div class="bal-sum">${userCount} user accounts · ${systemCount} system contracts</div>` +
     (balHTML || '<div class="empty">no state changes</div>');
-  detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (scroll) detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function stateDiffStatus(text) {
